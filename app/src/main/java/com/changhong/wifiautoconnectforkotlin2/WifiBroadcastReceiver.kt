@@ -12,3 +12,5 @@ class WifiBroadcastReceiver: BroadcastReceiver() {
         Log.e(TAG, Thread.currentThread().stackTrace[2].methodName + "[" + Thread.currentThread().stackTrace[2].lineNumber + "]" + action)
     }
 }
+
+// logcat |grep com.changhong.wifiautoconnectforkotlin2
