@@ -10,7 +10,7 @@ object FileKeyValueOP{
         var line: String
         var index: Int
         var strKey: String
-        var strValue: String    // 返回 defValue 表示失败
+        var strValue: String
         var res: Boolean = false
 
         try {
@@ -19,14 +19,11 @@ object FileKeyValueOP{
             while (null != run{line = br.readLine(); line}) {
                 line = line.trim()
                 if (-1 != run{index = line.indexOf('='); index}) {
-                    // 获取键
-                    strKey = line.substring(0, index)
+                    strKey = line.substring(0, index) // 获取键
                     if (key.trim() == strKey.trim()) { //比较
-                        // 获取值
-                        strValue = line.substring(index + 1).trim()
+                        strValue = line.substring(index + 1).trim() // 获取值
                         if (-1 != run{index = strValue.indexOf("//"); index}) {
-                            //去掉用 // 的注释
-                            strValue = strValue.substring(0, index).trim()
+                            strValue = strValue.substring(0, index).trim() //去掉用 // 的注释
                         }
                         vaule[0] = strValue
                         res = true
