@@ -1,15 +1,18 @@
 package com.changhong.wifiautoconnectforkotlin2
 
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.wifi.WifiManager
 import android.os.IBinder
 import android.util.Log
+import kotlin.concurrent.thread
 
 class MainService : Service() {
     private val TAG: String = MainService::class.java.`package`.name
     private lateinit var wifiReceiver: WifiBroadcastReceiver
+    private lateinit var wifiManager: WifiManager
 
     override fun onBind(intent: Intent?): IBinder? {
         throw UnsupportedOperationException("Not yet implemented")
@@ -17,6 +20,22 @@ class MainService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        wifiManager = baseContext.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+
+        thread {
+            // 启动线程，判断wifi是否开启，未开启进行启动
+            try {
+                while (true) {
+                    if (!wifiManager.isWifiEnabled) {
+                        wifiManager.isWifiEnabled = true
+                    }
+                    Thread.sleep(1000)
+                    //  Log.i(TAG, "HeartBeat");
+                }
+            } catch (e: InterruptedException) {
+                e.printStackTrace()
+            }
+        }
 
         wifiRegister()
     }
