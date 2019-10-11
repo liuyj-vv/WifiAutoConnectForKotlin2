@@ -10,7 +10,6 @@ import android.util.Log
 import kotlin.concurrent.thread
 
 class MainService : Service() {
-    private val TAG: String = MainService::class.java.`package`.name
     private lateinit var wifiReceiver: WifiBroadcastReceiver
     private lateinit var wifiManager: WifiManager
 
@@ -29,8 +28,10 @@ class MainService : Service() {
                     if (!wifiManager.isWifiEnabled) {
                         wifiManager.isWifiEnabled = true
                     }
+
                     Thread.sleep(1000)
-                    //  Log.i(TAG, "HeartBeat");
+                    log("HeartBeat ${wifiManager.toString()}")
+
                 }
             } catch (e: InterruptedException) {
                 e.printStackTrace()
