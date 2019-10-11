@@ -15,6 +15,7 @@ object config {
         var wifi_mask: String = ""
         var wifi_gw: String = ""
         var ping_ok_do: String = ""
+        var wifi_frequency_band: String = ""
     }
 
     private val configFile = "/system/etc/ch_auto_test_wifi.cfg"
