@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.wifi.WifiManager
 import android.os.IBinder
-import android.util.Log
 import kotlin.concurrent.thread
 
 class MainService : Service() {
@@ -30,7 +29,7 @@ class MainService : Service() {
                     }
 
                     Thread.sleep(1000)
-                    log("HeartBeat ${wifiManager.toString()}")
+//                    log("HeartBeat ${wifiManager.wifiState}")
 
                 }
             } catch (e: InterruptedException) {
@@ -42,7 +41,7 @@ class MainService : Service() {
     }
 
     private fun wifiRegister() {
-        wifiReceiver = WifiBroadcastReceiver()
+        wifiReceiver = WifiBroadcastReceiver(baseContext)
         val filter = IntentFilter()
         filter.addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)    //用于监听Android Wifi打开或关闭的状态，
         filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
@@ -58,6 +57,6 @@ class MainService : Service() {
         filter.addAction("TEST_ACTION3")
         filter.addAction("TEST_ACTION4")
         registerReceiver(wifiReceiver, filter)
-        Log.e(TAG, "wifi广播监听注册")
+        log("wifi广播监听注册")
     }
 }
