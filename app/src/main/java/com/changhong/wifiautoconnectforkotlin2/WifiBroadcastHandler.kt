@@ -75,8 +75,15 @@ class WifiBroadcastHandler {
         val bsFile = File(bs)
         val csFile = File(cs)
         if (bsFile.exists()) {
-            val cmd2_4G ="echo 0x21 >  $bs  && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan / && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan_results";
-            val cmd5G = "echo 0x1f > $bs  && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan / && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan_results";
+            /** 1. 命令 system 权限不够
+             *  wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan /
+             *  2. 查看当前扫描到的wifi热点命令，system 权限不能执行
+             *  wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan_results
+             *
+             *  经测试直接执行 echo 0x21 > file 写入对应的文件，就能配置 2.4G 或 5G
+             * */
+            val cmd2_4G ="echo 0x21 >  $bs "
+            val cmd5G = "echo 0x1f > $bs"
             if (config.value.wifi_frequency_band.equals("2.4G")) {
                 ExecCmd().run(cmd2_4G)
             } else if (config.value.wifi_frequency_band.equals("5G")) {
@@ -85,8 +92,8 @@ class WifiBroadcastHandler {
                 log("未配置2.4G或5G，使用双频模式！")
             }
         } else if (csFile.exists()) {
-            val cmd2_4G = "echo 0x21 > $cs && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan / && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan_results";
-            val cmd5G = "echo 0x1f > $cs && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan / && wpa_cli -iwlan0 -p /data/misc/wifi/sockets scan_results";
+            val cmd2_4G = "echo 0x21 > $cs"
+            val cmd5G = "echo 0x1f > $cs"
             if (config.value.wifi_frequency_band.equals("2.4G")) {
                 ExecCmd().run(cmd2_4G);
             } else if (config.value.wifi_frequency_band.equals("5G")) {
