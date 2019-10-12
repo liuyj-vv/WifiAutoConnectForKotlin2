@@ -23,10 +23,10 @@ class WifiBroadcastReceiver: BroadcastReceiver {
 
         when (action){
             WifiManager.WIFI_STATE_CHANGED_ACTION -> wifiBroadcastHandler.hardwareChanged(intent)
-            WifiManager.SCAN_RESULTS_AVAILABLE_ACTION -> wifiBroadcastHandler.scanResults(intent)
-            WifiManager.NETWORK_IDS_CHANGED_ACTION -> wifiBroadcastHandler.networkIDSChanged(intent)
             WifiManager.SUPPLICANT_STATE_CHANGED_ACTION -> wifiBroadcastHandler.supplicantChanged(intent)
+            WifiManager.NETWORK_IDS_CHANGED_ACTION -> wifiBroadcastHandler.networkIDSChanged(intent)
             WifiManager.NETWORK_STATE_CHANGED_ACTION -> wifiBroadcastHandler.networkStateChanged(intent)
+            WifiManager.SCAN_RESULTS_AVAILABLE_ACTION -> wifiBroadcastHandler.scanResults(intent)
             WifiManager.RSSI_CHANGED_ACTION -> wifiBroadcastHandler.rssiChanged(intent)
         }
 

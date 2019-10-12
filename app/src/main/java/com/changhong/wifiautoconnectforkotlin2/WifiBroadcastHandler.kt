@@ -3,7 +3,13 @@ package com.changhong.wifiautoconnectforkotlin2
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.NetworkInfo
+import android.net.wifi.SupplicantState
+import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
+import android.os.Build
+import android.support.annotation.RequiresApi
+import android.util.Log
 import java.io.File
 
 
@@ -16,6 +22,51 @@ class WifiBroadcastHandler {
         this.context = context
         wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         connectivityManager = context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+
+    fun connectWifi(wifiManager: WifiManager, ssid: String, passwd: String, wifiType: Int): Boolean {
+        // 开始连接
+        val netId = wifiManager.addNetwork(wifiHelper.createWifiConfig(wifiManager, ssid, passwd, wifiType))
+        if (-1 == netId) {
+            log2("添加新的网络到配置文件失败， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
+            return false
+        }
+
+        if (!wifiManager.enableNetwork(netId, true)) {
+            log2("使能新的网络描述id,失败, netId: $netId")
+            return false
+        }
+
+        if (!wifiManager.reconnect()) {
+            log2("尝试连接连接到网络失败！！！ 【reconnect】")
+            return false
+        }
+
+        log2("尝试连接连接网络到， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
+        return true
+    }
+
+    fun connectWifiForce(wifiManager: WifiManager, ssid: String, passwd: String, wifiType: Int): Boolean {
+        // 开始连接
+        val netId = wifiManager.addNetwork(wifiHelper.createWifiConfig(wifiManager, ssid, passwd, wifiType))
+        if (-1 == netId) {
+            log2("添加新的网络到配置文件失败， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
+            return false
+        }
+
+        if (!wifiManager.enableNetwork(netId, true)) {
+            log2("使能新的网络描述id,失败, netId: $netId")
+            return false
+        }
+
+        if (!wifiManager.reassociate()) {
+            log2("尝试连接连接到网络失败！！！ 【reassociate】")
+            return false
+        }
+
+        log2("强制 尝试连接连接网络到， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
+        return true
     }
 
     private fun setWifiSingleFrequency() {
@@ -84,106 +135,108 @@ class WifiBroadcastHandler {
         return false
     }
 
-     fun hardwareChanged(intent: Intent?) {
-         val wifiState = intent?.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1)
-         if (WifiManager.WIFI_STATE_ENABLED != wifiState) {
-             log("wifi 还未打开！")
-             return
-         } else {
+    fun hardwareChanged(intent: Intent?) {
+        val wifiState = intent?.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1)
+        if (WifiManager.WIFI_STATE_ENABLED != wifiState) {
+            log("wifi 还未打开！${wifiManager.wifiState} $wifiState")
+            return
+        } else {
             //wifi 已打开
-             log("wifi 已打开！")
-             setWifiSingleFrequency()
-         }
+            log("wifi 已打开！${wifiManager.wifiState} $wifiState")
+            setWifiSingleFrequency()
+        }
+        when (wifiState) {
+            WifiManager.WIFI_STATE_ENABLED ->{}
+            WifiManager.WIFI_MODE_FULL,
+            WifiManager.WIFI_MODE_SCAN_ONLY ->{
 
-         when (wifiState) {
-             WifiManager.WIFI_STATE_ENABLED ->{}
-             WifiManager.WIFI_MODE_FULL,
-             WifiManager.WIFI_MODE_SCAN_ONLY ->{
+            }
+        }
 
-             }
-         }
+        if(isConnectConfigSsid()) {
+            // 当前正在连接的 wifi 热点就是配置文件中的 ssid
+            return
+        }
 
-         if(isConnectConfigSsid()) {
-             // 当前正在连接的 wifi 热点就是配置文件中的 ssid
-             return
-         }
+        if (isContainConfigssid()) {
+            // 扫描的的热点包含配置文件中的 ssid
+            connectWifiForce(wifiManager, config.value.ssid, config.value.passwd, Integer.parseInt(config.value.wifiType))
+            return
+        }
 
-         if (isContainConfigssid()) {
-             // 扫描的的热点包含配置文件中的 ssid
-             connectWifiForce(wifiManager, config.value.ssid, config.value.passwd, Integer.parseInt(config.value.wifiType))
-             return
-         }
+        // 无论是否，正在连接。没有连接配置文件中的 ssid，去连接配置文件中的 ssid
+//        connectWifiForce(wifiManager, config.value.ssid, config.value.passwd, Integer.parseInt(config.value.wifiType))
+    }
 
-         // 无论是否，正在连接。没有连接配置文件中的 ssid，去连接配置文件中的 ssid
-         connectWifiForce(wifiManager, config.value.ssid, config.value.passwd, Integer.parseInt(config.value.wifiType))
-     }
+    @SuppressWarnings("deprecated")
+    fun supplicantChanged(intent: Intent?) {
+        val supplicantState = intent?.getParcelableExtra<SupplicantState>(WifiManager.EXTRA_NEW_STATE) //// 获取当前网络新状态.
+        val errorNo = intent?.getIntExtra(WifiManager.EXTRA_SUPPLICANT_ERROR, -1)      //// 获取当前网络连接状态码.
 
-    fun scanResults(intent: Intent?) {
-        log("")
+        log("scanSize: ${wifiManager.scanResults.size}, wifiManager: ${wifiManager.connectionInfo.ssid} ${wifiManager.connectionInfo.supplicantState}, Broadcast: $supplicantState")
+
+        if (errorNo == WifiManager.ERROR_AUTHENTICATING) {
+            log("$supplicantState --> 身份验证不通过!!!!")
+        }
+
+        when(supplicantState) {
+            SupplicantState.INVALID,
+            SupplicantState.SCANNING,
+            SupplicantState.UNINITIALIZED,
+
+            SupplicantState.ASSOCIATED,
+            SupplicantState.AUTHENTICATING,
+            SupplicantState.FOUR_WAY_HANDSHAKE,
+
+            SupplicantState.COMPLETED,
+            SupplicantState.DORMANT,
+            SupplicantState.DISCONNECTED,
+            SupplicantState.INACTIVE,
+            SupplicantState.ASSOCIATING,
+            SupplicantState.GROUP_HANDSHAKE,
+            SupplicantState.INTERFACE_DISABLED ->{
+
+            }
+        }
     }
 
     fun networkIDSChanged(intent: Intent?) {
-        log("")
-
+        log("================ ??????? ==================")
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
     fun networkStateChanged(intent: Intent?) {
-        log("")
+        val networkInfo = intent?.getParcelableExtra<NetworkInfo>(WifiManager.EXTRA_NETWORK_INFO)
+        val bssid = intent?.getStringExtra(WifiManager.EXTRA_BSSID)
+        val wifiInfo = intent?.getParcelableExtra<WifiInfo>(WifiManager.EXTRA_WIFI_INFO)
 
+        log("wifiManager: ${wifiManager.connectionInfo.ssid}, connectivityManager: ${connectivityManager.activeNetworkInfo.detailedState}, Broadcast: ${networkInfo?.detailedState}")
+
+        when(connectivityManager.activeNetworkInfo.detailedState) {
+            NetworkInfo.DetailedState.AUTHENTICATING,
+            NetworkInfo.DetailedState.BLOCKED,
+            NetworkInfo.DetailedState.CAPTIVE_PORTAL_CHECK,
+            NetworkInfo.DetailedState.CONNECTED,
+            NetworkInfo.DetailedState.CONNECTING,
+            NetworkInfo.DetailedState.DISCONNECTED,
+            NetworkInfo.DetailedState.DISCONNECTING,
+            NetworkInfo.DetailedState.FAILED,
+            NetworkInfo.DetailedState.IDLE,
+            NetworkInfo.DetailedState.OBTAINING_IPADDR, //正在获取IP地址
+            NetworkInfo.DetailedState.SCANNING,
+            NetworkInfo.DetailedState.SUSPENDED,
+            NetworkInfo.DetailedState.VERIFYING_POOR_LINK -> {
+
+            }
+        }
     }
 
-    fun supplicantChanged(intent: Intent?) {
-        log("")
-
+    fun scanResults(intent: Intent?) {
+        log("wifiManager: ${wifiManager.scanResults.size},  ${wifiManager.connectionInfo.supplicantState}")
     }
 
     fun rssiChanged(intent: Intent?) {
         log("")
-
     }
 
-    fun connectWifi(wifiManager: WifiManager, ssid: String, passwd: String, wifiType: Int): Boolean {
-        // 开始连接
-        val netId = wifiManager.addNetwork(wifiHelper.createWifiConfig(wifiManager, ssid, passwd, wifiType))
-        if (-1 == netId) {
-            log2("添加新的网络到配置文件失败， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
-            return false
-        }
-
-        if (!wifiManager.enableNetwork(netId, true)) {
-            log2("使能新的网络描述id,失败, netId: $netId")
-            return false
-        }
-
-        if (!wifiManager.reconnect()) {
-            log2("尝试连接连接到网络失败！！！ 【reconnect】")
-            return false
-        }
-
-        log2("尝试连接连接网络到， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
-        return true
-    }
-
-
-    fun connectWifiForce(wifiManager: WifiManager, ssid: String, passwd: String, wifiType: Int): Boolean {
-        // 开始连接
-        val netId = wifiManager.addNetwork(wifiHelper.createWifiConfig(wifiManager, ssid, passwd, wifiType))
-        if (-1 == netId) {
-            log2("添加新的网络到配置文件失败， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
-            return false
-        }
-
-        if (!wifiManager.enableNetwork(netId, true)) {
-            log2("使能新的网络描述id,失败, netId: $netId")
-            return false
-        }
-
-        if (!wifiManager.reassociate()) {
-            log2("尝试连接连接到网络失败！！！ 【reassociate】")
-            return false
-        }
-
-        log2("强制 尝试连接连接网络到， ssid： $ssid, wifiType:$wifiType====>> networkID: $netId")
-        return true
-    }
 }
