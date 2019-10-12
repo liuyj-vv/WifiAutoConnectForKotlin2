@@ -55,6 +55,6 @@ class MainService : Service() {
         filter.addAction("CONFIG_LOG1")
         filter.addAction("CONFIG_LOG2")
         registerReceiver(wifiReceiver, filter)
-        log("wifi广播监听注册")
+        log("WIFI Broadcast registered")
     }
 }

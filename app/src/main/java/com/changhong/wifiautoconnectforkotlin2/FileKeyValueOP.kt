@@ -16,7 +16,7 @@ object FileKeyValueOP{
         try {
             val reader: FileReader = FileReader(file)
             val br: BufferedReader = BufferedReader(reader)
-            while (null != run{line = br.readLine(); line}) {
+            while (null != run{line = br.readLine()}) {
                 line = line.trim()
                 if (-1 != run{index = line.indexOf('='); index}) {
                     strKey = line.substring(0, index) // 获取键

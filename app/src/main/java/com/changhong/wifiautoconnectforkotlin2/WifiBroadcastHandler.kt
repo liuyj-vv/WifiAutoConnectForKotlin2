@@ -118,12 +118,13 @@ class WifiBroadcastHandler {
 
     fun hardwareChanged(intent: Intent?) {
         val wifiState = intent?.getIntExtra(WifiManager.EXTRA_WIFI_STATE, -1)
+        ExecCmd().run("id")
         if (WifiManager.WIFI_STATE_ENABLED != wifiState) {
-            log("wifi 还未打开！${wifiManager.wifiState} $wifiState")
+            log("wifi is OFF！${wifiManager.wifiState} $wifiState")
             return
         } else {
             //wifi 已打开
-            log("wifi 已打开！${wifiManager.wifiState} $wifiState")
+            log("wifi is ON！ ${wifiManager.wifiState} $wifiState")
             setWifiSingleFrequency()
         }
         when (wifiState) {
@@ -136,12 +137,13 @@ class WifiBroadcastHandler {
 
         if(isCurrConnectIsConfigSsid()) {
             // 当前正在连接的 wifi 热点就是配置文件中的 ssid
+            // 已经在连接我们希望连接的热点，直接返回
             return
         }
 
         if (isScanContainConfigssid()) {
             // 扫描的的热点包含配置文件中的 ssid
-            connectWifiForce()
+            connectWifi()
             return
         }
 
