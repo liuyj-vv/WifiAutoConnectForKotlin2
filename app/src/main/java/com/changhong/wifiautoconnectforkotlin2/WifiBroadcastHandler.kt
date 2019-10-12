@@ -82,7 +82,7 @@ class WifiBroadcastHandler {
              *
              *  经测试直接执行 echo 0x21 > file 写入对应的文件，就能配置 2.4G 或 5G
              * */
-            val cmd2_4G ="echo 0x21 >  $bs "
+            val cmd2_4G ="echo 0x21 >  $bs"
             val cmd5G = "echo 0x1f > $bs"
             if (config.value.wifi_frequency_band.equals("2.4G")) {
                 ExecCmd().run(cmd2_4G)
@@ -245,6 +245,7 @@ class WifiBroadcastHandler {
                 if (isCurrConnectIsConfigSsid()) {
                     // 此处启动 ping 测试
                     // 如若能够 ping 通，则将灯设置为常亮
+                    ledControl.ledON()
                 }
             }
         }
