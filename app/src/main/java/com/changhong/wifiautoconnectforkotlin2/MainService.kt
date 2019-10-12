@@ -47,15 +47,13 @@ class MainService : Service() {
         filter.addAction(WifiManager.SCAN_RESULTS_AVAILABLE_ACTION)
         filter.addAction(WifiManager.NETWORK_IDS_CHANGED_ACTION)
         filter.addAction(WifiManager.SUPPLICANT_STATE_CHANGED_ACTION)
-        //        filter.addAction(WifiManager.CONFIGURED_NETWORKS_CHANGED_ACTION);
-        //        filter.addAction(WifiManager.LINK_CONFIGURATION_CHANGED_ACTION);
+        // filter.addAction(WifiManager.CONFIGURED_NETWORKS_CHANGED_ACTION);
+        // filter.addAction(WifiManager.LINK_CONFIGURATION_CHANGED_ACTION);
         filter.addAction(WifiManager.NETWORK_STATE_CHANGED_ACTION)//用于判断是否连接到了有效wifi（不能用于判断是否能够连接互联网）
         filter.addAction(WifiManager.RSSI_CHANGED_ACTION)
-        //        filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
-        filter.addAction("TEST_ACTION")
-        filter.addAction("TEST_ACTION2")
-        filter.addAction("TEST_ACTION3")
-        filter.addAction("TEST_ACTION4")
+        // filter.addAction(ConnectivityManager.CONNECTIVITY_ACTION);
+        filter.addAction("CONFIG_LOG1")
+        filter.addAction("CONFIG_LOG2")
         registerReceiver(wifiReceiver, filter)
         log("wifi广播监听注册")
     }

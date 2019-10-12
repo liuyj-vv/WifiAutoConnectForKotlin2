@@ -4,12 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.NetworkInfo
+import android.net.wifi.ScanResult
 import android.net.wifi.SupplicantState
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.support.annotation.RequiresApi
-import android.util.Log
 import java.io.File
 
 
@@ -25,7 +25,7 @@ class WifiBroadcastHandler {
     }
 
 
-    fun connectWifi(wifiManager: WifiManager, ssid: String, passwd: String, wifiType: Int): Boolean {
+    fun connectWifi(ssid: String = config.value.ssid, passwd: String = config.value.passwd, wifiType: Int = Integer.parseInt(config.value.wifiType)): Boolean {
         // 开始连接
         val netId = wifiManager.addNetwork(wifiHelper.createWifiConfig(wifiManager, ssid, passwd, wifiType))
         if (-1 == netId) {
@@ -47,7 +47,7 @@ class WifiBroadcastHandler {
         return true
     }
 
-    fun connectWifiForce(wifiManager: WifiManager, ssid: String, passwd: String, wifiType: Int): Boolean {
+    fun connectWifiForce(ssid: String = config.value.ssid, passwd: String = config.value.passwd, wifiType: Int = Integer.parseInt(config.value.wifiType)): Boolean {
         // 开始连接
         val netId = wifiManager.addNetwork(wifiHelper.createWifiConfig(wifiManager, ssid, passwd, wifiType))
         if (-1 == netId) {
@@ -99,40 +99,21 @@ class WifiBroadcastHandler {
         }
     }
 
-
-    private fun isContainConfigssid(): Boolean {
-        var index: Int = 0
-        val scanResultList = wifiManager.scanResults
-
-        if (scanResultList.isEmpty()) {
-            return false
-        }
-
-        while (index < scanResultList.size) {
-            if (scanResultList[index].SSID == config.value.ssid) {
-                // 扫描到的热点，有配置文件中的ssid
-                // log(scanResultList[index].SSID)
-                break
-            }
-            if (scanResultList.size == index + 1) {
-                // 扫描到的热点，没有配置文件中的ssid
-                return false
-            }
-            index++
-        }
-
-        return true
-    }
-
-    private fun isConnectConfigSsid(): Boolean {
-        val wifiInfo = wifiManager.connectionInfo
-        if (null != wifiInfo && null != wifiInfo.ssid) {
-            if (wifiInfo.ssid == "\"" + config.value.ssid + "\"" && "\"" + config.value.ssid + "\"" == wifiInfo.ssid) {
-                //连接上的热点就是配置文件中的热点，
+    private fun isScanContainConfigssid(scanResultList: List<ScanResult> = wifiManager.scanResults, ssid: String = config.value.ssid): Boolean {
+        for (scanResult in scanResultList) {
+            if (scanResult.SSID == ssid) {
+                log2("scanResultList is contain: $ssid")
                 return true
             }
         }
+        log2("scanResultList is not contain: $ssid")
+
         return false
+    }
+
+    private fun isCurrConnectIsConfigSsid(wifiInfo: WifiInfo = wifiManager.connectionInfo, ssid: String = config.value.ssid): Boolean {
+        log2("wifiInfo.ssid: ${wifiInfo.ssid}, ssid ---> $ssid ${wifiInfo.ssid == "\"$ssid\""}")
+        return wifiInfo.ssid == "\"$ssid\""
     }
 
     fun hardwareChanged(intent: Intent?) {
@@ -153,14 +134,14 @@ class WifiBroadcastHandler {
             }
         }
 
-        if(isConnectConfigSsid()) {
+        if(isCurrConnectIsConfigSsid()) {
             // 当前正在连接的 wifi 热点就是配置文件中的 ssid
             return
         }
 
-        if (isContainConfigssid()) {
+        if (isScanContainConfigssid()) {
             // 扫描的的热点包含配置文件中的 ssid
-            connectWifiForce(wifiManager, config.value.ssid, config.value.passwd, Integer.parseInt(config.value.wifiType))
+            connectWifiForce()
             return
         }
 
@@ -172,6 +153,7 @@ class WifiBroadcastHandler {
     fun supplicantChanged(intent: Intent?) {
         val supplicantState = intent?.getParcelableExtra<SupplicantState>(WifiManager.EXTRA_NEW_STATE) //// 获取当前网络新状态.
         val errorNo = intent?.getIntExtra(WifiManager.EXTRA_SUPPLICANT_ERROR, -1)      //// 获取当前网络连接状态码.
+        var wifiInfo:WifiInfo = wifiManager.connectionInfo
 
         log("scanSize: ${wifiManager.scanResults.size}, wifiManager: ${wifiManager.connectionInfo.ssid} ${wifiManager.connectionInfo.supplicantState}, Broadcast: $supplicantState")
 
@@ -182,21 +164,35 @@ class WifiBroadcastHandler {
         when(supplicantState) {
             SupplicantState.INVALID,
             SupplicantState.SCANNING,
-            SupplicantState.UNINITIALIZED,
-
-            SupplicantState.ASSOCIATED,
-            SupplicantState.AUTHENTICATING,
-            SupplicantState.FOUR_WAY_HANDSHAKE,
-
-            SupplicantState.COMPLETED,
-            SupplicantState.DORMANT,
-            SupplicantState.DISCONNECTED,
-            SupplicantState.INACTIVE,
+            SupplicantState.UNINITIALIZED -> { }
             SupplicantState.ASSOCIATING,
-            SupplicantState.GROUP_HANDSHAKE,
-            SupplicantState.INTERFACE_DISABLED ->{
+            SupplicantState.ASSOCIATED -> {
+                if (null == wifiInfo.ssid) {
+                    return
+                } else {
+                    if(!isCurrConnectIsConfigSsid()) {
+                        if (isScanContainConfigssid()) {
+                            // 当前有扫描到配置文件中的热点才尝试连接，不然会断开当前的连接不在连接。直到配置文件中的热点出现
+                            connectWifi()
+                        }
+                    }
+                }
 
+                if (isCurrConnectIsConfigSsid()) {
+                    // 控制灯闪烁
+                }
             }
+            SupplicantState.DISCONNECTED -> { // 连接断开，当前未连接
+                // 控制灯灭
+            }
+
+            SupplicantState.FOUR_WAY_HANDSHAKE -> { } // 握手正在进行中
+            SupplicantState.AUTHENTICATING -> { } // 验证用户信息
+            SupplicantState.COMPLETED,  // 这个消息，在获取网络IP地址的广播之后才会发出。
+            SupplicantState.DORMANT,
+            SupplicantState.INACTIVE,
+            SupplicantState.GROUP_HANDSHAKE,
+            SupplicantState.INTERFACE_DISABLED ->{ }
         }
     }
 
@@ -210,33 +206,71 @@ class WifiBroadcastHandler {
         val bssid = intent?.getStringExtra(WifiManager.EXTRA_BSSID)
         val wifiInfo = intent?.getParcelableExtra<WifiInfo>(WifiManager.EXTRA_WIFI_INFO)
 
-        log("wifiManager: ${wifiManager.connectionInfo.ssid}, connectivityManager: ${connectivityManager.activeNetworkInfo.detailedState}, Broadcast: ${networkInfo?.detailedState}")
+        log("Broadcast wifiInfo: ${wifiInfo?.ssid} ${wifiInfo?.supplicantState}, Broadcast networkInfo: ${networkInfo?.detailedState}")
+        log("wifiManager: ${wifiManager.connectionInfo.ssid} ${wifiManager.connectionInfo.supplicantState},  connectivityManager: ${connectivityManager.activeNetworkInfo.detailedState}")
 
-        when(connectivityManager.activeNetworkInfo.detailedState) {
+        // 经试验，
+        // 1. 广播收到的 wifiInfo 不准确，几个内容都将传入 null。使用时使用 wifiManager.connectionInfo 代替。
+        // 2. 广播收到的 networkInfo 和 connectivityManager.activeNetworkInfo 中的信息不一致，connectivityManager.activeNetworkInfo中只有一个状态 CONNECTED。使用广播传入的 networkInfo
+        when(networkInfo?.detailedState) {
             NetworkInfo.DetailedState.AUTHENTICATING,
             NetworkInfo.DetailedState.BLOCKED,
             NetworkInfo.DetailedState.CAPTIVE_PORTAL_CHECK,
-            NetworkInfo.DetailedState.CONNECTED,
             NetworkInfo.DetailedState.CONNECTING,
             NetworkInfo.DetailedState.DISCONNECTED,
             NetworkInfo.DetailedState.DISCONNECTING,
             NetworkInfo.DetailedState.FAILED,
             NetworkInfo.DetailedState.IDLE,
-            NetworkInfo.DetailedState.OBTAINING_IPADDR, //正在获取IP地址
             NetworkInfo.DetailedState.SCANNING,
             NetworkInfo.DetailedState.SUSPENDED,
-            NetworkInfo.DetailedState.VERIFYING_POOR_LINK -> {
+            NetworkInfo.DetailedState.OBTAINING_IPADDR, // 等待来自DHCP服务器的响应，以便分配IP地址信息
+            NetworkInfo.DetailedState.VERIFYING_POOR_LINK -> { } // 链接连接不良
+            NetworkInfo.DetailedState.CONNECTED -> {
+                if(!isCurrConnectIsConfigSsid() && isScanContainConfigssid()) {
+                    // 前方有判断，不应该运行到这个位置
+                    // 1. 连接的不是配置中的热点
+                    // 2. 扫描的热点信息，存在配置文件中的 ssid
+                    connectWifi()
+                }
 
+                if (isCurrConnectIsConfigSsid()) {
+                    // 此处启动 ping 测试
+                    // 如若能够 ping 通，则将灯设置为常亮
+                }
             }
         }
     }
 
     fun scanResults(intent: Intent?) {
-        log("wifiManager: ${wifiManager.scanResults.size},  ${wifiManager.connectionInfo.supplicantState}")
+        log("wifiManager.scan: ${wifiManager.scanResults.size},  ${wifiManager.connectionInfo.supplicantState}")
+
+        if (null == wifiManager.connectionInfo.ssid) {
+            if (isScanContainConfigssid()) {
+                connectWifi()
+            }
+            return
+        } else {
+            if(!isCurrConnectIsConfigSsid() && isScanContainConfigssid()) {
+                // 1. 连接的不是配置中的热点
+                // 2. 扫描的热点信息，存在配置文件中的 ssid
+                connectWifi()
+            }
+        }
     }
 
     fun rssiChanged(intent: Intent?) {
-        log("")
+        if (null == wifiManager.connectionInfo.ssid) {
+            if (isScanContainConfigssid()) {
+                connectWifi()
+            }
+            return
+        } else {
+            if(!isCurrConnectIsConfigSsid() && isScanContainConfigssid()) {
+                // 1. 连接的不是配置中的热点
+                // 2. 扫描的热点信息，存在配置文件中的 ssid
+                connectWifi()
+            }
+        }
     }
 
 }

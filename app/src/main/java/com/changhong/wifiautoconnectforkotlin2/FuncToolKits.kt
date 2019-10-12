@@ -8,6 +8,7 @@ fun log(message: String?) {
 }
 
 
+// 打印调用 log2 函数调用时的位置信息
 fun log2(message: String?) {
-    Log.e(TAG, "[${Thread.currentThread().stackTrace[4].lineNumber}]${Thread.currentThread().stackTrace[4].methodName}: $message")
+    Log.e(TAG, "[${Thread.currentThread().stackTrace[5].lineNumber}]${Thread.currentThread().stackTrace[5].methodName}: $message")
 }
