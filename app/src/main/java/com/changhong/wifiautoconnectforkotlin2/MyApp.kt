@@ -6,11 +6,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 object MyApp {
-    val TAG = "chcommonfactory"
-    private var instance: MyApp? = null
-    var bUSB1 = false
-    var bUSB2 = false
-
     internal var cpuNums = Runtime.getRuntime().availableProcessors()
     var mExeCutorService = Executors.newFixedThreadPool(cpuNums * 4)
 
@@ -23,14 +18,6 @@ object MyApp {
     private val WRITE_TIMEOUT = 5
 
     private var mHttpClient: OkHttpClient? = null
-
-    @Synchronized
-    fun getInstance(): MyApp? {
-        if (null == instance) {
-            instance = this
-        }
-        return instance
-    }
 
     fun getOkHttp(): OkHttpClient? {
 
